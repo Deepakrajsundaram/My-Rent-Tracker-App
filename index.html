@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<title>Rent Tracker V1</title>
+<style>
+:root{--bg:#0d0f12;--card:#171a1f;--card2:#20242b;--text:#f5f7fa;--muted:#9ca3af;--line:#2b3038;--green:#42d392;--amber:#f4b740;--red:#ff6b6b;--accent:#8b7cff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",sans-serif}
+button,input{font:inherit}button{border:0;color:inherit}
+.app{max-width:430px;margin:auto;min-height:100vh;padding:18px 16px 90px}
+header{display:flex;align-items:center;justify-content:space-between;margin:4px 0 16px}
+.brand{font-weight:800;font-size:23px;letter-spacing:-.5px}.month{color:var(--muted);font-size:14px;margin-top:3px}
+.iconbtn{background:var(--card);width:42px;height:42px;border-radius:14px;font-size:20px}
+.summary{background:linear-gradient(145deg,#1d2027,#15181d);border:1px solid var(--line);border-radius:24px;padding:20px;margin-bottom:18px;box-shadow:0 12px 30px #0004}
+.summary .big{font-size:32px;font-weight:800;letter-spacing:-1px}.summary .label{color:var(--muted);font-size:13px;margin-top:3px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}.stat{background:#ffffff08;border-radius:15px;padding:10px}.stat b{display:block;font-size:15px}.stat span{font-size:11px;color:var(--muted)}
+.section{display:flex;justify-content:space-between;align-items:center;margin:18px 2px 10px}.section h2{font-size:16px;margin:0}.section button{background:none;color:var(--accent);font-size:13px}
+.houses{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.house{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;min-height:132px;position:relative;text-align:left;cursor:pointer}
+.house:active{transform:scale(.98)}.house-top{display:flex;justify-content:space-between;gap:8px}.house-name{font-weight:750;font-size:15px}.tenant{font-size:12px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rent{font-size:18px;font-weight:750;margin-top:18px}.status{font-size:11px;margin-top:4px;font-weight:700}.paid{color:var(--green)}.partial{color:var(--amber)}.pending{color:var(--red)}
+.quick{position:absolute;right:10px;bottom:10px;width:34px;height:34px;border-radius:11px;background:var(--card2);font-weight:800}
+.share{margin-top:14px;width:100%;padding:13px;border-radius:15px;background:#ffffff0a;border:1px solid var(--line);font-weight:700}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100%);padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#0d0f12ee;backdrop-filter:blur(18px);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid #ffffff10}
+nav button{background:none;color:var(--muted);padding:8px;border-radius:12px;font-size:12px}nav button.active{color:var(--text);background:var(--card)}
+.modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-end;justify-content:center;z-index:5}.modal.open{display:flex}
+.sheet{width:min(430px,100%);background:#171a1f;border:1px solid var(--line);border-radius:26px 26px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 5px}.sub{color:var(--muted);font-size:13px;margin-bottom:18px}.field{margin:12px 0}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.field input{width:100%;background:#0f1115;border:1px solid var(--line);border-radius:13px;padding:12px;color:var(--text);outline:none}
+.actions{display:flex;gap:8px;margin-top:16px}.actions button{flex:1;padding:13px;border-radius:14px;background:var(--card2);font-weight:700}.actions .primary{background:var(--accent);color:white}
+.monthnav{display:flex;align-items:center;gap:8px}.monthnav button{background:var(--card);border-radius:10px;width:32px;height:32px}
+.empty{grid-column:1/-1;color:var(--muted);padding:25px;text-align:center}
+@media(max-height:740px){.house{min-height:116px}.rent{margin-top:10px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div><div class="brand">Rent Tracker</div><div class="month" id="monthLabel"></div></div>
+  <button class="iconbtn" onclick="openSettings()">⚙</button>
+</header>
+
+<div class="monthnav">
+  <button onclick="changeMonth(-1)">‹</button>
+  <div style="flex:1;text-align:center;font-weight:750" id="monthTitle"></div>
+  <button onclick="changeMonth(1)">›</button>
+</div>
+
+<section class="summary">
+  <div class="big" id="collected">₹0</div><div class="label">Collected this month</div>
+  <div class="stats">
+    <div class="stat"><b id="expected">₹0</b><span>Expected</span></div>
+    <div class="stat"><b id="outstanding">₹0</b><span>Outstanding</span></div>
+    <div class="stat"><b id="paidCount">0 / 0</b><span>Paid</span></div>
+  </div>
+  <button class="share" onclick="shareMonth()">↗ Share current month</button>
+</section>
+
+<div class="section"><h2>Your Houses</h2><button onclick="openSettings()">Manage</button></div>
+<div class="houses" id="houses"></div>
+</div>
+
+<nav>
+  <button class="active" onclick="setTab('home',this)">⌂<br>Home</button>
+  <button onclick="setTab('history',this)">◷<br>History</button>
+  <button onclick="openSettings()">⚙<br>Settings</button>
+</nav>
+
+<div class="modal" id="paymentModal" onclick="if(event.target===this)closeModal()">
+  <div class="sheet">
+    <h2 id="paymentTitle">Record Payment</h2><div class="sub" id="paymentSub"></div>
+    <div class="field"><label>Amount received</label><input id="amount" type="number" inputmode="decimal" min="0" placeholder="₹ 0"></div>
+    <div class="field"><label>Payment date</label><input id="payDate" type="date"></div>
+    <div class="actions"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="savePayment()">Record Payment</button></div>
+  </div>
+</div>
+
+<div class="modal" id="historyModal" onclick="if(event.target===this)closeHistory()">
+ <div class="sheet" style="max-height:88vh;overflow:auto">
+  <h2>History</h2><div class="sub">Previous months and payment records</div>
+  <div class="monthnav" style="margin-bottom:14px">
+   <button onclick="changeHistoryMonth(-1)">‹</button>
+   <div style="flex:1;text-align:center;font-weight:750" id="historyMonthTitle"></div>
+   <button onclick="changeHistoryMonth(1)">›</button>
+  </div>
+  <div id="historyContent"></div>
+ </div>
+</div>
+
+<div class="modal" id="settingsModal" onclick="if(event.target===this)closeSettings()">
+ <div class="sheet">
+  <h2>House Setup</h2><div class="sub">Edit the six houses. Data is stored locally in this browser.</div>
+  <div id="settingsFields"></div>
+  <div class="actions"><button onclick="closeSettings()">Cancel</button><button class="primary" onclick="saveSettings()">Save</button></div>
+ </div>
+</div>
+
+<script>
+const KEY='rentTrackerV1Data';
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ houses:Array.from({length:6},(_,i)=>({id:'h'+(i+1),name:'House '+(i+1),tenant:'Tenant '+String.fromCharCode(65+i),rent:0,active:true})),
+ payments:[], version:1
+};
+let viewDate=new Date(); viewDate.setDate(1); let selectedHouse=null;
+
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function ym(d){return d.toISOString().slice(0,7)}
+function money(n){return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n||0)}
+function monthName(y,m){return new Intl.DateTimeFormat('en-IN',{month:'long',year:'numeric'}).format(new Date(y,m,1))}
+function currentMonth(){return ym(viewDate)}
+function monthRecord(h){let m=currentMonth();let ps=data.payments.filter(p=>p.houseId===h.id&&p.month===m);let paid=ps.reduce((a,p)=>a+p.amount,0);return {paid,remaining:Math.max(0,h.rent-paid),payments:ps}}
+function render(){
+ let m=currentMonth();document.getElementById('monthLabel').textContent=monthName(viewDate.getFullYear(),viewDate.getMonth());
+ document.getElementById('monthTitle').textContent=monthName(viewDate.getFullYear(),viewDate.getMonth());
+ let hs=data.houses.filter(h=>h.active);let expected=hs.reduce((a,h)=>a+h.rent,0),collected=hs.reduce((a,h)=>a+monthRecord(h).paid,0);
+ document.getElementById('expected').textContent=money(expected);document.getElementById('collected').textContent=money(collected);document.getElementById('outstanding').textContent=money(Math.max(0,expected-collected));
+ document.getElementById('paidCount').textContent=hs.filter(h=>monthRecord(h).remaining===0&&h.rent>0).length+' / '+hs.length;
+ const box=document.getElementById('houses');box.innerHTML='';
+ hs.forEach(h=>{let r=monthRecord(h), status=h.rent<=0?'Set rent':r.paid>=h.rent?'PAID':r.paid>0?'PARTIAL':'PENDING', cls=status==='PAID'?'paid':status==='PARTIAL'?'partial':'pending';
+ let div=document.createElement('div');div.className='house';div.onclick=()=>openHouse(h.id);
+ div.innerHTML=`<div class="house-top"><div><div class="house-name">${esc(h.name)}</div><div class="tenant">${esc(h.tenant)}</div></div><div class="status ${cls}">${status==='PAID'?'✓':status==='PARTIAL'?'◐':'○'}</div></div>
+ <div class="rent">${money(h.rent)}</div><div class="status ${cls}">${status==='PARTIAL'?money(r.remaining)+' due':status==='PAID'?'Paid':'Pending'}</div>
+ <button class="quick" onclick="event.stopPropagation();quickPayment('${h.id}')">${status==='PAID'?'✓':'₹'}</button>`;
+ box.appendChild(div)});
+ save()
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function changeMonth(n){viewDate.setMonth(viewDate.getMonth()+n);render()}
+function openHouse(id){selectedHouse=id;let h=data.houses.find(x=>x.id===id);let r=monthRecord(h);document.getElementById('paymentTitle').textContent=h.name+' — '+monthName(viewDate.getFullYear(),viewDate.getMonth());document.getElementById('paymentSub').textContent=`Expected ${money(h.rent)} · Paid ${money(r.paid)} · Remaining ${money(r.remaining)}`;document.getElementById('amount').value=r.remaining>0?r.remaining:'';document.getElementById('payDate').value=new Date().toISOString().slice(0,10);document.getElementById('paymentModal').classList.add('open')}
+function quickPayment(id){let h=data.houses.find(x=>x.id===id),r=monthRecord(h);if(r.remaining<=0){return}selectedHouse=id;document.getElementById('amount').value=r.remaining;document.getElementById('payDate').value=new Date().toISOString().slice(0,10);document.getElementById('paymentTitle').textContent='Full Payment';document.getElementById('paymentSub').textContent=h.name+' · '+monthName(viewDate.getFullYear(),viewDate.getMonth());document.getElementById('paymentModal').classList.add('open')}
+function closeModal(){document.getElementById('paymentModal').classList.remove('open')}
+function savePayment(){let amount=Number(document.getElementById('amount').value),date=document.getElementById('payDate').value,h=data.houses.find(x=>x.id===selectedHouse),r=monthRecord(h);if(!amount||amount<=0||!date)return alert('Enter a valid amount and date.');if(amount>r.remaining)return alert('Amount exceeds the remaining rent for this month.');data.payments.push({id:crypto.randomUUID(),houseId:h.id,month:currentMonth(),amount,date});save();closeModal();render()}
+function openSettings(){let f=document.getElementById('settingsFields');f.innerHTML=data.houses.map((h,i)=>`<div style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>House ${i+1}</b><div class="field"><label>House name</label><input data-k="name" data-i="${i}" value="${esc(h.name)}"></div><div class="field"><label>Tenant</label><input data-k="tenant" data-i="${i}" value="${esc(h.tenant)}"></div><div class="field"><label>Monthly rent</label><input data-k="rent" data-i="${i}" type="number" inputmode="decimal" value="${h.rent||''}"></div></div>`).join('');document.getElementById('settingsModal').classList.add('open')}
+function closeSettings(){document.getElementById('settingsModal').classList.remove('open')}
+function saveSettings(){document.querySelectorAll('#settingsFields input').forEach(x=>{let h=data.houses[Number(x.dataset.i)],k=x.dataset.k;h[k]=k==='rent'?Number(x.value||0):x.value});save();closeSettings();render()}
+async function shareMonth(){let m=monthName(viewDate.getFullYear(),viewDate.getMonth()),hs=data.houses.filter(h=>h.active),lines=hs.map(h=>{let r=monthRecord(h),s=r.remaining===0&&h.rent>0?'PAID':r.paid>0?`PARTIAL — ${money(r.remaining)} due`:'PENDING';return `${h.name} — ${money(h.rent)} — ${s}`}).join('\\n');let expected=hs.reduce((a,h)=>a+h.rent,0),paid=hs.reduce((a,h)=>a+monthRecord(h).paid,0),text=`RENT STATUS — ${m}\\n\\nExpected: ${money(expected)}\\nCollected: ${money(paid)}\\nOutstanding: ${money(Math.max(0,expected-paid))}\\n\\n${lines}`;if(navigator.share){try{await navigator.share({title:`Rent Status — ${m}`,text})}catch(e){}}else{await navigator.clipboard.writeText(text);alert('Status copied to clipboard.')}}
+let historyDate=new Date(); historyDate.setDate(1);
+function openHistory(){
+  historyDate=new Date(viewDate);
+  renderHistory();
+  document.getElementById('historyModal').classList.add('open');
+}
+function closeHistory(){document.getElementById('historyModal').classList.remove('open')}
+function changeHistoryMonth(n){historyDate.setMonth(historyDate.getMonth()+n);renderHistory()}
+function renderHistory(){
+  document.getElementById('historyMonthTitle').textContent=monthName(historyDate.getFullYear(),historyDate.getMonth());
+  const m=ym(historyDate);
+  const hs=data.houses;
+  let expected=hs.filter(h=>h.active).reduce((a,h)=>a+h.rent,0);
+  let paid=hs.reduce((a,h)=>a+data.payments.filter(p=>p.houseId===h.id&&p.month===m).reduce((x,p)=>x+p.amount,0),0);
+  let content=`<div class="summary" style="margin-bottom:12px"><div class="stats" style="margin-top:0">
+    <div class="stat"><b>${money(expected)}</b><span>Expected</span></div>
+    <div class="stat"><b>${money(paid)}</b><span>Collected</span></div>
+    <div class="stat"><b>${money(Math.max(0,expected-paid))}</b><span>Outstanding</span></div>
+  </div></div>`;
+  hs.forEach(h=>{
+    const ps=data.payments.filter(p=>p.houseId===h.id&&p.month===m).sort((a,b)=>a.date.localeCompare(b.date));
+    const total=ps.reduce((a,p)=>a+p.amount,0);
+    const rem=Math.max(0,h.rent-total);
+    const status=h.rent<=0?'Rent not set':rem===0?'PAID':total>0?'PARTIAL':'PENDING';
+    content+=`<div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between"><b>${esc(h.name)}</b><b class="${status==='PAID'?'paid':status==='PARTIAL'?'partial':'pending'}">${status}</b></div>
+      <div class="tenant">${esc(h.tenant)} · Expected ${money(h.rent)}</div>
+      <div style="margin-top:10px;font-size:14px">Paid: <b>${money(total)}</b> · Remaining: <b>${money(rem)}</b></div>
+      ${ps.length?`<div style="margin-top:9px;border-top:1px solid var(--line);padding-top:8px">${ps.map(p=>`<div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span>${new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(p.date+'T00:00:00'))}</span><b>${money(p.amount)}</b></div>`).join('')}</div>`:'<div class="tenant" style="margin-top:8px">No payments recorded</div>'}
+    </div>`;
+  });
+  document.getElementById('historyContent').innerHTML=content;
+}
+function setTab(tab,btn){
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  if(tab==='history') openHistory();
+}
+render();
+</script>
+</body>
+</html>
