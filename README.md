@@ -1,34 +1,27 @@
-# D's Rent Tracker V1.2
+# D's Rent Tracker V1.4
 
-GitHub Pages-ready, iPhone-first rent tracker.
+GitHub Pages-ready iPhone-first rent tracker.
 
-## Files
-- `index.html` — application
-- `ds_rent_tracker_logo.png` — master logo
-- `apple-touch-icon.png` — iPhone Home Screen icon
-- `manifest.json` — web app metadata
-- `README.md` — setup notes
+## V1.4
+- Fixed Settings scrolling so all 6 houses are accessible.
+- Fixed History navigation with a clear back-to-home button.
+- Added direct Edit House screen.
+- Tapping a house card still records a payment; editing is done from Settings/Manage.
+- Payment month can be selected, including older months with outstanding rent.
+- Last-month pending amount shown on the dashboard.
+- Share status includes all active houses, current payment status, and payment date/amount details.
+- Added versioned, uniquely named iPhone icons to prevent the old To-Do icon from being reused by Safari cache.
+- Added the D's Rent Tracker logo inside the app header.
+- Preserves the existing `rentTrackerV1Data` localStorage key and existing payment data.
 
 ## GitHub Pages
-Put all files in the repository root on the `main` branch, then use:
-Settings → Pages → Deploy from a branch → `main` → `/(root)`.
+Put all files in the repository root on `main`, then deploy:
+Settings -> Pages -> Deploy from a branch -> main -> /(root).
 
-## V1.2 changes
-- D's Rent Tracker favicon
-- iPhone Home Screen icon
-- PWA manifest
-- Fixed local month/date handling
-- History screen
-- Last-month pending amount on dashboard
-- Payment month selector
-- Previous unpaid months can be selected when recording a payment
-- Existing localStorage key/data structure preserved
+## Important for the iPhone icon
+After deployment, delete the old Rent Tracker Home Screen shortcut and add the site again from Safari:
+Share -> Add to Home Screen.
+The icon filenames are intentionally versioned/unique for this app.
 
-## Data preservation
-The app uses the existing `rentTrackerV1Data` localStorage key.
-Do not change this key in future versions. Future versions should migrate
-existing data instead of clearing or replacing it.
-
-## Important
-GitHub Pages hosts the app code but does not synchronize localStorage
-between devices. Data remains local to the browser/device.
+## Data
+Rent data is stored locally in the browser/device. GitHub Pages does not synchronize localStorage between devices.
