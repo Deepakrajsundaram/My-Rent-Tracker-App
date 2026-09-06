@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#0d0f12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="D's Rent Tracker">
-<link rel="manifest" href="./manifest.json?v=1.4">
-<link rel="icon" type="image/png" sizes="512x512" href="./ds-rent-tracker-icon-512.png?v=1.4">
-<link rel="apple-touch-icon" sizes="180x180" href="./ds-rent-tracker-icon-180.png?v=1.4">
+<link rel="manifest" href="./manifest.json?v=1.7">
+<link rel="icon" type="image/png" sizes="512x512" href="./ds-rent-tracker-icon-512.png?v=1.7">
+<link rel="apple-touch-icon" sizes="180x180" href="./ds-rent-tracker-icon-180.png?v=1.7">
 <title>D's Rent Tracker</title>
 <style>
 :root{--bg:#0d0f12;--card:#171a1f;--card2:#20242b;--text:#f5f7fa;--muted:#9ca3af;--line:#2b3038;--green:#42d392;--amber:#f4b740;--red:#ff6b6b;--accent:#8b7cff}
@@ -69,7 +69,16 @@ nav button.active{color:var(--text);background:var(--card)}
 .history-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:10px}
 .history-card .row{display:flex;justify-content:space-between;gap:10px}
 .history-card .small{font-size:12px;color:var(--muted)}
-.payment-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin:6px 0}
+.payment-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin:6px 0;align-items:center}
+.payment-action{width:30px;height:30px;border-radius:9px;background:var(--card2);font-size:15px}
+.payment-action.danger{color:var(--red);background:#ff6b6b12}
+
+.share-image-preview{background:#0d0f12;border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:12px}
+.share-image-canvas{width:100%;border-radius:12px;display:block}
+.share-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.share-options button{padding:12px;border-radius:14px;background:var(--card2);font-weight:700}
+.share-options .primary{background:var(--accent)}
+.payment-item{padding:3px 0}
 .empty{color:var(--muted);padding:25px;text-align:center}
 @media(max-height:740px){.house{min-height:116px}.rent{margin-top:10px}}
 </style>
@@ -78,7 +87,7 @@ nav button.active{color:var(--text);background:var(--card)}
 <div class="app">
 <header>
   <div class="brand-wrap">
-    <img class="brand-logo" src="./ds-rent-tracker-icon-180.png?v=1.4" alt="">
+    <img class="brand-logo" src="./ds-rent-tracker-icon-180.png?v=1.7" alt="">
     <div><div class="brand">D's Rent Tracker</div><div class="month" id="monthLabel"></div></div>
   </div>
   <button class="iconbtn" onclick="openSettings()" aria-label="Settings">⚙</button>
@@ -99,7 +108,7 @@ nav button.active{color:var(--text);background:var(--card)}
     <div class="stat"><b id="paidCount">0 / 0</b><span>Paid</span></div>
   </div>
   <div class="pending-note" id="lastPending"></div>
-  <button class="share" onclick="shareMonth()">↗ Share current month status</button>
+  <button class="share" onclick="openShare()">↗ Share current month status</button>
 </section>
 
 <div class="section"><h2>Your Houses</h2><button onclick="openSettings()">Manage</button></div>
@@ -111,6 +120,29 @@ nav button.active{color:var(--text);background:var(--card)}
   <button id="historyNav" onclick="openHistory()">◷<br>History</button>
   <button id="settingsNav" onclick="openSettings()">⚙<br>Settings</button>
 </nav>
+
+<div class="modal" id="shareModal" onclick="if(event.target===this)closeShare()">
+  <div class="sheet">
+    <div class="sheet-header">
+      <button class="iconbtn" onclick="closeShare()" aria-label="Back">‹</button>
+      <div>
+        <h2>Share Status</h2>
+        <div class="sub">Choose text or a clean image</div>
+      </div>
+    </div>
+
+    <div class="share-image-preview">
+      <canvas id="shareCanvas" class="share-image-canvas"></canvas>
+    </div>
+
+    <div class="share-options">
+      <button onclick="shareText()">↗ Share text</button>
+      <button class="primary" onclick="shareImage()">▣ Share image</button>
+      <button onclick="downloadShareImage()">Save image</button>
+      <button onclick="copyShareText()">Copy text</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal" id="paymentModal" onclick="if(event.target===this)closeModal()">
   <div class="sheet">
@@ -137,6 +169,22 @@ nav button.active{color:var(--text);background:var(--card)}
       <button onclick="changeHistoryMonth(1)">›</button>
     </div>
     <div id="historyContent" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div class="modal" id="editPaymentModal" onclick="if(event.target===this)closeEditPayment()">
+  <div class="sheet">
+    <div class="sheet-header">
+      <button class="iconbtn" onclick="closeEditPayment()" aria-label="Back">‹</button>
+      <div><h2>Edit Payment</h2><div class="sub">Correct the amount, month or date</div></div>
+    </div>
+    <div class="field"><label>Payment for month</label><select id="editPaymentMonth"></select></div>
+    <div class="field"><label>Amount received</label><input id="editPaymentAmount" type="number" inputmode="decimal" min="0"></div>
+    <div class="field"><label>Payment date</label><input id="editPaymentDate" type="date"></div>
+    <div class="actions">
+      <button onclick="closeEditPayment()">Cancel</button>
+      <button class="primary" onclick="saveEditedPayment()">Save changes</button>
+    </div>
   </div>
 </div>
 
@@ -358,6 +406,99 @@ function saveEditedHouse(){
   h.rent=Math.max(0,Number(document.getElementById('editHouseRent').value||0));
   save();closeEditHouse();render();
 }
+function editPayment(id){
+  const p=data.payments.find(x=>x.id===id);
+  if(!p)return;
+
+  editPaymentId=id;
+
+  const h=data.houses.find(x=>x.id===p.houseId);
+  if(!h)return;
+
+  const select=document.getElementById('editPaymentMonth');
+  const months=[];
+  const base=dateFromYM(p.month);
+  const current=dateFromYM(currentMonth());
+
+  for(let i=12;i>=0;i--){
+    const d=new Date(current.getFullYear(),current.getMonth()-i,1);
+    const m=ym(d);
+    if(!months.includes(m))months.push(m);
+  }
+  if(!months.includes(p.month))months.push(p.month);
+
+  select.innerHTML=months.map(m=>{
+    const label=monthName(dateFromYM(m).getFullYear(),dateFromYM(m).getMonth());
+    return `<option value="${m}" ${m===p.month?'selected':''}>${esc(label)}</option>`;
+  }).join('');
+
+  document.getElementById('editPaymentAmount').value=p.amount;
+  document.getElementById('editPaymentDate').value=p.date;
+
+  document.getElementById('editPaymentModal').classList.add('open');
+}
+
+let editPaymentId=null;
+
+function closeEditPayment(){
+  document.getElementById('editPaymentModal').classList.remove('open');
+  editPaymentId=null;
+}
+
+function saveEditedPayment(){
+  const p=data.payments.find(x=>x.id===editPaymentId);
+  if(!p)return;
+
+  const amount=Number(document.getElementById('editPaymentAmount').value);
+  const month=document.getElementById('editPaymentMonth').value;
+  const date=document.getElementById('editPaymentDate').value;
+
+  if(!amount || amount<=0 || !month || !date){
+    alert('Enter a valid amount, payment month and date.');
+    return;
+  }
+
+  const otherPaid=data.payments
+    .filter(x=>x.id!==p.id && x.houseId===p.houseId && x.month===month)
+    .reduce((a,x)=>a+Number(x.amount||0),0);
+
+  const h=data.houses.find(x=>x.id===p.houseId);
+  if(!h)return;
+
+  if(otherPaid+amount>Number(h.rent||0)){
+    alert('The corrected payment exceeds the rent due for this month.');
+    return;
+  }
+
+  p.amount=amount;
+  p.month=month;
+  p.date=date;
+
+  save();
+  closeEditPayment();
+  render();
+  renderHistory();
+}
+
+function deletePayment(id){
+  const p=data.payments.find(x=>x.id===id);
+  if(!p)return;
+
+  const h=data.houses.find(x=>x.id===p.houseId);
+  const houseName=h?h.name:'this house';
+
+  const confirmed=confirm(
+    `Delete this payment?\\n\\n${houseName} — ${money(p.amount)} on ${formatDate(p.date)}\\n\\nThe payment will be removed and the outstanding amount will be recalculated.`
+  );
+
+  if(!confirmed)return;
+
+  data.payments=data.payments.filter(x=>x.id!==id);
+  save();
+  render();
+  renderHistory();
+}
+
 function openHistory(){
   historyDate=new Date(viewDate);
   setNav('history');
@@ -379,27 +520,221 @@ function renderHistory(){
     const cls=status==='PAID'?'paid':status==='PARTIAL'?'partial':'pending';
     content+=`<div class="history-card"><div class="row"><b>${esc(h.name)}</b><b class="${cls}">${status}</b></div><div class="small">${esc(h.tenant)} · Expected ${money(h.rent)}</div><div style="margin-top:9px">Paid: <b>${money(r.paid)}</b> · Remaining: <b>${money(r.remaining)}</b></div>`;
     if(r.payments.length){
-      content+=`<div style="border-top:1px solid var(--line);margin-top:9px;padding-top:7px">${r.payments.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(p=>`<div class="payment-row"><span>${formatDate(p.date)}</span><b>${money(p.amount)}</b></div>`).join('')}</div>`;
+      content+=`<div style="border-top:1px solid var(--line);margin-top:9px;padding-top:7px">${r.payments.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(p=>`
+        <div class="payment-row payment-item">
+          <span>${formatDate(p.date)}</span>
+          <span style="display:flex;align-items:center;gap:7px">
+            <b>${money(p.amount)}</b>
+            <button class="payment-action" onclick="editPayment('${p.id}')">✎</button>
+            <button class="payment-action danger" onclick="deletePayment('${p.id}')">×</button>
+          </span>
+        </div>`).join('')}</div>`;
     }else content+=`<div class="small" style="margin-top:8px">No payments recorded</div>`;
     content+=`</div>`;
   });
   document.getElementById('historyContent').innerHTML=content;
 }
-function shareMonth(){
+let shareTextCache='';
+let shareImageBlob=null;
+
+function shareData(){
   const m=currentMonth(), d=dateFromYM(m), hs=data.houses.filter(h=>h.active);
-  const lines=hs.map((h,i)=>{
-    const r=monthRecord(h,m);
-    let status=h.rent<=0?'RENT NOT SET':r.remaining===0?'PAID':r.paid>0?`PARTIAL — ${money(r.remaining)} due`:`PENDING — ${money(r.remaining)} due`;
-    const dates=r.payments.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(p=>`${formatDate(p.date)} (${money(p.amount)})`).join(', ');
-    return `${i+1}. ${h.name} — ${money(h.rent)} — ${status}${dates?` — ${dates}`:''}`;
-  }).join('\\n');
   const expected=hs.reduce((a,h)=>a+Number(h.rent||0),0);
   const paid=hs.reduce((a,h)=>a+monthRecord(h,m).paid,0);
-  const text=`D'S RENT TRACKER\nRENT STATUS — ${monthName(d.getFullYear(),d.getMonth())}\n\nExpected: ${money(expected)}\nCollected: ${money(paid)}\nOutstanding: ${money(Math.max(0,expected-paid))}\n\n${lines}`;
-  if(navigator.share){navigator.share({title:`Rent Status — ${monthName(d.getFullYear(),d.getMonth())}`,text}).catch(()=>{})}
-  else if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>alert('Status copied to clipboard.'))}
-  else alert(text);
+  const outstanding=Math.max(0,expected-paid);
+
+  const rows=hs.map((h,i)=>{
+    const r=monthRecord(h,m);
+    const status=h.rent<=0?'RENT NOT SET':r.remaining===0?'PAID':r.paid>0?'PARTIAL': 'PENDING';
+    const dates=r.payments.slice().sort((a,b)=>a.date.localeCompare(b.date))
+      .map(p=>`${formatDate(p.date)} (${money(p.amount)})`).join(', ');
+    return {
+      no:i+1,name:h.name,tenant:h.tenant,rent:Number(h.rent||0),
+      paid:r.paid,remaining:r.remaining,status,dates
+    };
+  });
+
+  const text=[
+    `D'S RENT TRACKER`,
+    `RENT STATUS — ${monthName(d.getFullYear(),d.getMonth())}`,
+    ``,
+    `Expected     ${money(expected)}`,
+    `Collected    ${money(paid)}`,
+    `Outstanding  ${money(outstanding)}`,
+    ``,
+    ...rows.map(x=>`${x.no}. ${x.name}\n   Rent: ${money(x.rent)} | Paid: ${money(x.paid)} | Due: ${money(x.remaining)}\n   Status: ${x.status}${x.dates?`\n   Payments: ${x.dates}`:''}`)
+  ].join('\n');
+
+  return {m,d,expected,paid,outstanding,rows,text};
 }
+
+function openShare(){
+  const s=shareData();
+  shareTextCache=s.text;
+  drawShareImage(s);
+  document.getElementById('shareModal').classList.add('open');
+}
+
+function closeShare(){
+  document.getElementById('shareModal').classList.remove('open');
+}
+
+function drawShareImage(s){
+  const canvas=document.getElementById('shareCanvas');
+  const width=1080;
+  const rowHeight=118;
+  const headerHeight=280;
+  const footerHeight=80;
+  const height=headerHeight+(s.rows.length*rowHeight)+footerHeight;
+
+  canvas.width=width;
+  canvas.height=height;
+
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0d0f12';
+  ctx.fillRect(0,0,width,height);
+
+  // Header
+  ctx.fillStyle='#f5f7fa';
+  ctx.font='800 52px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText("D'S RENT TRACKER",70,78);
+
+  ctx.fillStyle='#9ca3af';
+  ctx.font='500 34px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(`Rent Status — ${monthName(s.d.getFullYear(),s.d.getMonth())}`,70,128);
+
+  // Summary card
+  ctx.fillStyle='#171a1f';
+  roundRect(ctx,55,165,970,92,24);
+  ctx.fillStyle='#f5f7fa';
+  ctx.font='700 30px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(`Expected  ${money(s.expected)}`,85,218);
+  ctx.fillText(`Collected  ${money(s.paid)}`,390,218);
+  ctx.fillText(`Due  ${money(s.outstanding)}`,700,218);
+
+  // House rows
+  s.rows.forEach((x,i)=>{
+    const y=headerHeight+i*rowHeight;
+    ctx.fillStyle='#171a1f';
+    roundRect(ctx,55,y,970,rowHeight-12,22);
+
+    ctx.fillStyle='#f5f7fa';
+    ctx.font='800 30px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`${x.no}. ${x.name}`,80,y+39);
+
+    ctx.fillStyle='#9ca3af';
+    ctx.font='500 24px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(`${x.tenant || 'Tenant'}  •  Rent ${money(x.rent)}  •  Paid ${money(x.paid)}  •  Due ${money(x.remaining)}`,80,y+73);
+
+    ctx.fillStyle=x.status==='PAID'?'#42d392':x.status==='PARTIAL'?'#f4b740':'#ff6b6b';
+    ctx.font='800 23px -apple-system, BlinkMacSystemFont, sans-serif';
+    const tw=ctx.measureText(x.status).width;
+    ctx.fillText(x.status,930-tw,y+39);
+
+    if(x.dates){
+      ctx.fillStyle='#9ca3af';
+      ctx.font='500 18px -apple-system, BlinkMacSystemFont, sans-serif';
+      const paymentLine=truncateCanvas(ctx,`Payments: ${x.dates}`,760);
+      ctx.fillText(paymentLine,80,y+100);
+    }
+  });
+
+  ctx.fillStyle='#667080';
+  ctx.font='500 18px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText('D’s Rent Tracker • Generated on this device',70,height-28);
+
+  canvas.toBlob(blob=>{shareImageBlob=blob},'image/png');
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function truncateCanvas(ctx,text,maxWidth){
+  if(ctx.measureText(text).width<=maxWidth)return text;
+  while(text.length>0 && ctx.measureText(text+'…').width>maxWidth)text=text.slice(0,-1);
+  return text+'…';
+}
+
+async function shareText(){
+  if(!shareTextCache)shareTextCache=shareData().text;
+  if(navigator.share){
+    try{
+      await navigator.share({
+        title:`Rent Status — ${monthName(viewDate.getFullYear(),viewDate.getMonth())}`,
+        text:shareTextCache
+      });
+    }catch(e){}
+  }else{
+    copyShareText();
+  }
+}
+
+async function shareImage(){
+  if(!shareImageBlob){
+    const s=shareData();
+    drawShareImage(s);
+    await new Promise(r=>setTimeout(r,100));
+  }
+  if(!shareImageBlob)return;
+
+  const file=new File(
+    [shareImageBlob],
+    `Ds-Rent-Tracker-${currentMonth()}.png`,
+    {type:'image/png'}
+  );
+
+  if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+    try{
+      await navigator.share({
+        title:`Rent Status — ${monthName(viewDate.getFullYear(),viewDate.getMonth())}`,
+        text:`D's Rent Tracker — ${monthName(viewDate.getFullYear(),viewDate.getMonth())}`,
+        files:[file]
+      });
+      return;
+    }catch(e){}
+  }
+
+  downloadBlob(shareImageBlob,file.name);
+}
+
+function downloadShareImage(){
+  if(!shareImageBlob){
+    const s=shareData();
+    drawShareImage(s);
+  }
+  setTimeout(()=>{
+    if(shareImageBlob)downloadBlob(shareImageBlob,`Ds-Rent-Tracker-${currentMonth()}.png`);
+  },80);
+}
+
+function downloadBlob(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+async function copyShareText(){
+  if(!shareTextCache)shareTextCache=shareData().text;
+  try{
+    await navigator.clipboard.writeText(shareTextCache);
+    alert('Status copied to clipboard.');
+  }catch(e){
+    alert(shareTextCache);
+  }
+}
+
 function setNav(tab){
   document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
   if(tab==='history')document.getElementById('historyNav').classList.add('active');
