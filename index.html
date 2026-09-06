@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#0d0f12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="D's Rent Tracker">
-<link rel="manifest" href="./manifest.json?v=1.7">
-<link rel="icon" type="image/png" sizes="512x512" href="./ds-rent-tracker-icon-512.png?v=1.7">
-<link rel="apple-touch-icon" sizes="180x180" href="./ds-rent-tracker-icon-180.png?v=1.7">
+<link rel="manifest" href="./manifest.json?v=1.8">
+<link rel="icon" type="image/png" sizes="512x512" href="./ds-rent-tracker-icon-512.png?v=1.8">
+<link rel="apple-touch-icon" sizes="180x180" href="./ds-rent-tracker-icon-180.png?v=1.8">
 <title>D's Rent Tracker</title>
 <style>
 :root{--bg:#0d0f12;--card:#171a1f;--card2:#20242b;--text:#f5f7fa;--muted:#9ca3af;--line:#2b3038;--green:#42d392;--amber:#f4b740;--red:#ff6b6b;--accent:#8b7cff}
@@ -81,13 +81,15 @@ nav button.active{color:var(--text);background:var(--card)}
 .payment-item{padding:3px 0}
 .empty{color:var(--muted);padding:25px;text-align:center}
 @media(max-height:740px){.house{min-height:116px}.rent{margin-top:10px}}
+
+.data-safe{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.data-safe h3{font-size:15px;margin:0 0 5px}.data-safe p{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.45}.data-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.data-actions button{padding:12px;border-radius:13px;background:var(--card2);font-weight:700}.data-actions .primary{background:var(--accent);color:white}.backup-status{font-size:11px;color:var(--muted);margin-top:9px}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
   <div class="brand-wrap">
-    <img class="brand-logo" src="./ds-rent-tracker-icon-180.png?v=1.7" alt="">
+    <img class="brand-logo" src="./ds-rent-tracker-icon-180.png?v=1.8" alt="">
     <div><div class="brand">D's Rent Tracker</div><div class="month" id="monthLabel"></div></div>
   </div>
   <button class="iconbtn" onclick="openSettings()" aria-label="Settings">⚙</button>
@@ -194,8 +196,22 @@ nav button.active{color:var(--text);background:var(--card)}
       <button class="iconbtn" onclick="closeSettings()" aria-label="Back to home">‹</button>
       <div><h2>House Setup</h2><div class="sub">Edit all 6 houses</div></div>
     </div>
-    <div class="sub">Changes are stored locally on this device.</div>
+    <div class="sub">Changes are stored locally on this device. Keep a backup file before replacing the app files or making major changes.</div>
     <div id="settingsFields"></div>
+
+    <div class="data-safe">
+      <h3>Data & Backup</h3>
+      <p>Your rent data is stored locally on this device. Create a backup file before major updates or whenever you want an extra copy.</p>
+      <div class="data-actions">
+        <button class="primary" onclick="downloadBackup()">💾 Backup data</button>
+        <button onclick="document.getElementById('restoreFile').click()">📥 Restore data</button>
+        <button onclick="exportDataText()">📤 Export data</button>
+        <button onclick="verifyStoredData()">🛡 Verify data</button>
+      </div>
+      <input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreFromFile(event)">
+      <div class="backup-status" id="backupStatus"></div>
+    </div>
+
     <div class="actions">
       <button onclick="closeSettings()">Cancel</button>
       <button class="primary" onclick="saveSettings()">Save changes</button>
@@ -218,12 +234,16 @@ nav button.active{color:var(--text);background:var(--card)}
 
 <script>
 const KEY='rentTrackerV1Data';
+const BACKUP_KEY='rentTrackerV1DataBackup';
+const META_KEY='rentTrackerV1DataMeta';
+const SCHEMA_VERSION=2;
 const today=new Date();
 let data=loadData();
 let viewDate=new Date(today.getFullYear(),today.getMonth(),1);
 let historyDate=new Date(viewDate);
 let selectedHouse=null;
 let editHouseId=null;
+let editPaymentId=null;
 
 function defaultData(){
   return {
@@ -232,26 +252,146 @@ function defaultData(){
       tenant:'Tenant '+String.fromCharCode(65+i),
       rent:0,active:true
     })),
-    payments:[],version:1
+    payments:[],version:SCHEMA_VERSION
   };
 }
+
+function isValidData(x){
+  return !!(x && Array.isArray(x.houses) && Array.isArray(x.payments));
+}
+
+function normalizeData(saved){
+  const d=JSON.parse(JSON.stringify(saved));
+  if(!Array.isArray(d.houses))d.houses=[];
+  while(d.houses.length<6){
+    const i=d.houses.length;
+    d.houses.push({id:'h'+(i+1),name:'House '+(i+1),tenant:'',rent:0,active:true});
+  }
+  d.houses=d.houses.slice(0,6);
+  d.houses.forEach((h,i)=>{
+    h.id=h.id||'h'+(i+1);
+    h.name=String(h.name??('House '+(i+1)));
+    h.tenant=String(h.tenant??'');
+    h.rent=Math.max(0,Number(h.rent)||0);
+    h.active=h.active!==false;
+  });
+  if(!Array.isArray(d.payments))d.payments=[];
+  d.payments=d.payments.filter(p=>p && p.houseId && p.month && p.date && Number(p.amount)>0).map(p=>({
+    id:String(p.id || ((crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random()))),
+    houseId:String(p.houseId),month:String(p.month),amount:Number(p.amount),date:String(p.date)
+  }));
+  d.version=SCHEMA_VERSION;
+  return d;
+}
+
 function loadData(){
   try{
-    const saved=JSON.parse(localStorage.getItem(KEY)||'null');
-    if(saved && Array.isArray(saved.houses) && Array.isArray(saved.payments)){
-      while(saved.houses.length<6){
-        const i=saved.houses.length;
-        saved.houses.push({id:'h'+(i+1),name:'House '+(i+1),tenant:'',rent:0,active:true});
-      }
-      saved.houses=saved.houses.slice(0,6);
-      saved.houses.forEach((h,i)=>{h.id=h.id||'h'+(i+1);if(h.active===undefined)h.active=true;h.rent=Number(h.rent)||0});
-      saved.version=1;
-      return saved;
+    const raw=localStorage.getItem(KEY);
+    if(raw){
+      const saved=JSON.parse(raw);
+      if(isValidData(saved))return normalizeData(saved);
     }
   }catch(e){}
+
+  // If the main record is missing/corrupt, try the internal backup before creating defaults.
+  try{
+    const rawBackup=localStorage.getItem(BACKUP_KEY);
+    if(rawBackup){
+      const backup=JSON.parse(rawBackup);
+      if(isValidData(backup)){
+        const restored=normalizeData(backup);
+        localStorage.setItem(KEY,JSON.stringify(restored));
+        return restored;
+      }
+    }
+  }catch(e){}
+
   return defaultData();
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+
+function save(){
+  const normalized=normalizeData(data);
+  data=normalized;
+  const payload=JSON.stringify(normalized);
+  try{
+    // Always preserve the last known-good record before replacing the primary record.
+    const existing=localStorage.getItem(KEY);
+    if(existing){
+      try{
+        const parsed=JSON.parse(existing);
+        if(isValidData(parsed))localStorage.setItem(BACKUP_KEY,JSON.stringify(parsed));
+      }catch(e){}
+    }
+    localStorage.setItem(KEY,payload);
+    localStorage.setItem(META_KEY,JSON.stringify({schema:SCHEMA_VERSION,lastSaved:new Date().toISOString()}));
+  }catch(e){
+    alert('Could not save your rent data. Please create a backup and try again.');
+  }
+}
+
+function downloadBackup(){
+  save();
+  const payload={
+    app:"D's Rent Tracker",
+    formatVersion:SCHEMA_VERSION,
+    exportedAt:new Date().toISOString(),
+    data:normalizeData(data)
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  downloadBlob(blob,`Ds-Rent-Tracker-Backup-${localDateString()}.json`);
+  setBackupStatus('Backup file created just now.');
+}
+
+function exportDataText(){
+  const payload={app:"D's Rent Tracker",formatVersion:SCHEMA_VERSION,exportedAt:new Date().toISOString(),data:normalizeData(data)};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  downloadBlob(blob,`Ds-Rent-Tracker-Export-${localDateString()}.json`);
+  setBackupStatus('Export file created just now.');
+}
+
+function restoreFromFile(event){
+  const file=event.target.files&&event.target.files[0];
+  event.target.value='';
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(reader.result);
+      const candidate=parsed && parsed.data ? parsed.data : parsed;
+      if(!isValidData(candidate))throw new Error('Invalid backup');
+      const restored=normalizeData(candidate);
+      if(!confirm(`Restore this backup?\\n\\n${restored.houses.length} houses and ${restored.payments.length} payment records will replace the current data on this device.`))return;
+      // Preserve the current data as an internal backup before restoring.
+      try{localStorage.setItem(BACKUP_KEY,JSON.stringify(normalizeData(data)));}catch(e){}
+      data=restored;
+      save();
+      render();
+      setBackupStatus('Backup restored successfully.');
+      alert('Backup restored successfully.');
+    }catch(e){
+      alert('This file is not a valid D\'s Rent Tracker backup.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function setBackupStatus(message){
+  const el=document.getElementById('backupStatus');
+  if(el)el.textContent=message;
+}
+
+function verifyStoredData(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    const parsed=raw?JSON.parse(raw):null;
+    if(isValidData(parsed)){
+      setBackupStatus(`Data is readable: ${parsed.houses.length} houses, ${parsed.payments.length} payment records.`);
+      return;
+    }
+  }catch(e){}
+  setBackupStatus('Primary data could not be read. An internal backup will be attempted when the app reloads.');
+}
+
 function ym(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 function dateFromYM(m){const [y,mo]=m.split('-').map(Number);return new Date(y,mo-1,1)}
 function previousMonth(m){const d=dateFromYM(m);d.setMonth(d.getMonth()-1);return ym(d)}
@@ -378,6 +518,8 @@ function openSettings(){
       <div class="field"><label>Monthly rent</label><input data-k="rent" data-i="${i}" type="number" inputmode="decimal" min="0" value="${h.rent||''}"></div>
     </div>`).join('');
   setNav('settings');
+  const meta=(()=>{try{return JSON.parse(localStorage.getItem(META_KEY)||'null')}catch(e){return null}})();
+  setBackupStatus(meta&&meta.lastSaved?`Last saved: ${new Intl.DateTimeFormat('en-IN',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meta.lastSaved))}`:'Data saved locally on this device.');
   document.getElementById('settingsModal').classList.add('open');
 }
 function closeSettings(){document.getElementById('settingsModal').classList.remove('open');setNav('home')}
