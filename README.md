@@ -1,25 +1,20 @@
-# D's Rent Tracker V1.8 — Data Safe
+# D's Rent Tracker V1.9
 
-GitHub Pages-ready iPhone-first rent tracker.
+## Deployment
+Replace the old GitHub Pages files with `index.html` and `manifest.json`.
 
-## Data protection
-- Keeps the existing `rentTrackerV1Data` storage key.
-- Loads existing valid data before creating defaults.
-- Never initializes default data over an existing valid record.
-- Adds schema normalization/migration for future updates.
-- Keeps a separate last-known-good internal backup in Local Storage before replacing the primary record.
-- Adds **Backup data** to download a complete JSON backup.
-- Adds **Restore data** to restore a JSON backup.
-- Adds **Export data** and **Verify data**.
-- Existing house/payment data remains intact when moving from V1.7 to V1.8.
+## Critical data compatibility
+- The app keeps the existing Local Storage key: `rentTrackerV1Data`.
+- Existing V1.8 browser data is intended to load automatically.
+- Do **not** clear browser/site data.
+- If V1.8 still opens, use **Settings → Backup data** before replacement.
 
-## Payment correction
-- History supports editing payment amount/month/date.
-- History supports deleting an individual payment.
-- Houses are never deleted by the payment controls.
+## Backup features included
+- Backup data: downloads a complete JSON backup.
+- Restore data: restores a JSON backup.
+- Export data: downloads the current data as JSON.
+- Verify data: checks whether stored data is readable.
+- Internal last-known-good backup is stored under `rentTrackerV1DataBackup`.
 
-## Important
-Local Storage is still browser-managed. A downloaded backup file is the safest independent copy. Do not clear Safari website data before creating a backup.
-
-## Deploy
-Replace the files in the GitHub repository root and redeploy GitHub Pages. Keep the same site/domain.
+## Main V1.9 fix
+The V1.8 source contained a duplicate `let editPaymentId` declaration, which causes a JavaScript SyntaxError and prevents the whole app from initializing. V1.9 removes that duplicate declaration while keeping the existing storage key and data format.

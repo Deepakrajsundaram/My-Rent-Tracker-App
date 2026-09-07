@@ -1,13 +1,1 @@
-{
-  "name": "D's Rent Tracker",
-  "short_name": "Rent Tracker",
-  "start_url": "./?v=1.8",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#0d0f12",
-  "theme_color": "#0d0f12",
-  "icons": [
-    {"src":"./ds-rent-tracker-icon-180.png?v=1.8","sizes":"180x180","type":"image/png","purpose":"any"},
-    {"src":"./ds-rent-tracker-icon-512.png?v=1.8","sizes":"512x512","type":"image/png","purpose":"any maskable"}
-  ]
-}
+{"name":"D's Rent Tracker","short_name":"Rent Tracker","start_url":"./","display":"standalone","background_color":"#0d0f12","theme_color":"#0d0f12","description":"D's Rent Tracker - local rent and payment tracking"}
