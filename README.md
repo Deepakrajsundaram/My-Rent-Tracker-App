@@ -1,20 +1,25 @@
-# D's Rent Tracker V1.9
+# D's Rent Tracker V2.0
 
-## Deployment
-Replace the old GitHub Pages files with `index.html` and `manifest.json`.
+## Fixed house order
+1. Periyar St Lower
+2. Periyar St Upper
+3. K.N.P Back House
+4. K.N.P Upper
+5. K.N.P Front House
+6. SPK Nagar Lower
 
-## Critical data compatibility
-- The app keeps the existing Local Storage key: `rentTrackerV1Data`.
-- Existing V1.8 browser data is intended to load automatically.
-- Do **not** clear browser/site data.
-- If V1.8 still opens, use **Settings → Backup data** before replacement.
+## Data safety
+- Preserves the existing `rentTrackerV1Data` storage key for backward compatibility.
+- House names are hardcoded and cannot be edited in the UI. Tenant and rent remain editable.
+- Uses schema versioning and normalization for future migrations.
+- Creates two rotating internal backups before a write.
+- Never replaces a corrupt existing primary record with a fresh empty dataset.
+- Backup / Restore / Export / Verify are included.
+- Restore backs up the current data first.
+- Rendering does not write to storage; only actual data changes do.
 
-## Backup features included
-- Backup data: downloads a complete JSON backup.
-- Restore data: restores a JSON backup.
-- Export data: downloads the current data as JSON.
-- Verify data: checks whether stored data is readable.
-- Internal last-known-good backup is stored under `rentTrackerV1DataBackup`.
+## GitHub Pages deployment
+Replace the old `index.html` and `manifest.json` with the files in this package. Do not clear browser/site data.
 
-## Main V1.9 fix
-The V1.8 source contained a duplicate `let editPaymentId` declaration, which causes a JavaScript SyntaxError and prevents the whole app from initializing. V1.9 removes that duplicate declaration while keeping the existing storage key and data format.
+## Important
+Before major future app replacements, use Settings -> Backup data and keep the JSON file in iCloud Drive/Files.

@@ -1,1 +1,10 @@
-{"name":"D's Rent Tracker","short_name":"Rent Tracker","start_url":"./","display":"standalone","background_color":"#0d0f12","theme_color":"#0d0f12","description":"D's Rent Tracker - local rent and payment tracking"}
+{
+  "name":"D's Rent Tracker",
+  "short_name":"Rent Tracker",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#0d0f12",
+  "theme_color":"#0d0f12",
+  "description":"D's Rent Tracker - local rent and payment tracker",
+  "version":"2.0"
+}
